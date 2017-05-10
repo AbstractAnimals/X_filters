@@ -5,6 +5,7 @@ import sys
 import os
 import logging # module to enable logging
 import numpy as np
+import time
 
 # setup argument parser
 parser = argparse.ArgumentParser(description="Script to filter vcf files.")
@@ -13,6 +14,7 @@ parser.add_argument('-o', '--output', type=str, default='', help='Name of output
 parser.add_argument('-m', '--meta-output', type=str, default='', help='Name of meta data output file.')
 parser.add_argument('-gq', '--gq-threshold', type=int, default=20, help='GQ threshold to use (default=20).')
 parser.add_argument('--fold-change-margin', type=float, default=0.2, help='Margin around 2.0 to use for fold change check (default=0.2).')
+parser.add_argument('--log-file', type=str, default='', help='File to write log information to (uses stdout if none specified).')
 
 # parse command line arguments
 opts = parser.parse_args(sys.argv[1:])
@@ -121,18 +123,22 @@ removed = 0
 total = 0
 
 # setup logging, this will log anything info level or above
-logging.basicConfig(filename='X_filtering.log', filemode='a', level=logging.INFO, format='%(asctime)s %(name)s: %(message)s')
+logging.basicConfig(filename=(opts.log_file if opts.log_file != '' else None), filemode='a', level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 
-logging.info('Starting of filtering.')
+logging.info('Start of filtering.')
 
 # open files for reading
-with open(opts.input, "r") as f, open(opts.output, "w") as fw, open(opts.meta_output, "w") as fm:
+try:
+    f = open(opts.input, "r")
+    fw = open(opts.output, "w")
+    fm = open(opts.meta_output, "w")
     logging.info('Opened input file %s' % opts.input)
     logging.info('Opened output file %s' % opts.output)
     logging.info('Opened output meta file %s' % opts.meta_output)
     csv_reader = csv.reader(f, delimiter="\t")
     csv_writer = csv.writer(fw, delimiter="\t")
     csv_meta_writer = csv.writer(fm, delimiter="\t")
+    s = time.time()
     for row in csv_reader:
         if row[0].startswith("##"):
             continue
@@ -163,3 +169,10 @@ with open(opts.input, "r") as f, open(opts.output, "w") as fw, open(opts.meta_ou
                 removed += 1
             csv_meta_writer.writerow([row[0], row[1], is_male_heterozygote, n_hm_male, n_ht_male, n_hm_female, n_ht_female, gq_filtered,
                                       male_mean_coverage, female_mean_coverage, fold_change, fold_change_in_range])
+    e = time.time()
+    logging.info('Filtered %d/%d records leaving %d in %.2f seconds.' % (removed, total, total - removed, e-s))
+    f.close()
+    fw.close()
+    fm.close()
+except IOError as ioerror:
+    logging.error('Problem opening files: ' + str(ioerror))
