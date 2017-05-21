@@ -198,8 +198,9 @@ try:
         plt.hist(fold_changes[key], range=(0.0, 5.0), bins=20)
         plt.xlabel('fold change')
         plt.title('Dist of fold change for %s'%key)
-    plt.savefig('%s_fold_change_dist.png' % opts.input)
+    plt.savefig('%s_fold_change_dist.png' % os.path.basename(opts.input))
 
+    plt.figure()
     for i, key in enumerate(coverages.keys()):
         plt.subplot(3,1,i+1)
         plt.hist(coverages[key]['male'], bins=20, label='male', alpha=0.8)
@@ -207,7 +208,7 @@ try:
         plt.legend(loc='best')
         plt.xlabel('coverage')
         plt.title('Dist of fold change for %s'%key)
-    plt.savefig('%s_coverage_dist.png' % opts.input)
+    plt.savefig('%s_coverage_dist.png' % os.path.basename(opts.input))
 
 
 except IOError as ioerror:
