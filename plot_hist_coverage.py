@@ -10,6 +10,7 @@ import time
 # setup argument parser
 parser = argparse.ArgumentParser(description="Script to filter vcf files.")
 parser.add_argument('-i', '--input', type=str, default='', help='Name of input vcf file.')
+parser.add_argument('-o', '--output-id', type=str, default='', help='Identifying string to put in output filenames.')
 parser.add_argument('-gq', '--gq-threshold', type=int, default=20, help='GQ threshold to use (default=20).')
 parser.add_argument('--fold-change-margin', type=float, default=0.2, help='Margin around 2.0 to use for fold change check (default=0.2).')
 parser.add_argument('--log-file', type=str, default='', help='File to write log information to (uses stdout if none specified).')
@@ -202,7 +203,8 @@ try:
         plt.hist(fold_changes[key], range=(0.0, 5.0), bins=20)
         plt.xlabel('fold change')
         plt.title('Dist of fold change for %s'%key)
-    plt.savefig('%s_fold_change_dist.png' % os.path.basename(opts.input))
+    output_id = '_id_%s_' % (opts.output_id)
+    plt.savefig('%s%sfold_change_dist.png' % (os.path.basename(opts.input), output_id))
 
     plt.figure()
     for i, key in enumerate(coverages.keys()):
@@ -212,7 +214,7 @@ try:
         plt.legend(loc='best')
         plt.xlabel('coverage')
         plt.title('Dist of fold change for %s'%key)
-    plt.savefig('%s_coverage_dist.png' % os.path.basename(opts.input))
+    plt.savefig('%s%scoverage_dist.png' % (os.path.basename(opts.input), output_id))
 
 
 except IOError as ioerror:
