@@ -15,6 +15,7 @@ parser.add_argument('-m', '--meta-output', type=str, default='', help='Name of m
 parser.add_argument('-gq', '--gq-threshold', type=int, default=20, help='GQ threshold to use (default=20).')
 parser.add_argument('--fold-change-margin', type=float, default=0.2, help='Margin around 2.0 to use for fold change check (default=0.2).')
 parser.add_argument('--log-file', type=str, default='', help='File to write log information to (uses stdout if none specified).')
+parser.add_argument('-r', '--reverse', action='store_true', help='Interchange the labels on the males and females.')
 
 # parse command line arguments
 opts = parser.parse_args(sys.argv[1:])
@@ -23,7 +24,7 @@ opts = parser.parse_args(sys.argv[1:])
 individual_start_col = 9
 
 # define useful functions
-def find_genders(x, offset):
+def find_genders(x, offset, reverse=False):
     males = []
     females = []
     for i, ind in enumerate(x):
@@ -31,7 +32,10 @@ def find_genders(x, offset):
             males.append(i + offset)
         elif ind[2].lower() == 'f':
             females.append(i + offset)
-    return males, females
+    if reverse:
+        return females, males
+    else:
+        return males, females
 
 def is_heterozygote(snp_info):
     first_part = snp_info[:snp_info.find(':')]
@@ -145,15 +149,15 @@ try:
         if row[0].startswith("#"): # header column
             headers = row
             individuals = headers[individual_start_col:]
-            male_cols, female_cols = find_genders(individuals, offset=individual_start_col)
+            male_cols, female_cols = find_genders(individuals, offset=individual_start_col, reverse=opts.reverse)
             csv_writer.writerow(row)
             csv_meta_writer.writerow(["locus", "position", "is_male_heterozygote", "n_male_homozygote", "n_male_heterozygote",
                                       "n_female_homozygote", "n_female_heterozygote", "n_gq_filtered", "male_mean_coverage",
                                       "female_mean_coverage", "fold_change", "fold_change_in_range"])
         else:
             total += 1
-            gq_filtered = filter_by_gq(row, opts.gq_threshold, offset=individual_start_col)  # filter individuals where gq is less than given threshold
-            n_hm_male, n_ht_male, n_hm_female, n_ht_female = count_zygote_gt_type(row, male_cols, female_cols)
+            gq_filtered = filter_by_gq(row, opts.gq_threshold, offset=individual_start_col)  # filter individuals where gq is less than given threshold                            
+            n_hm_male, n_ht_male, n_hm_female, n_ht_female = count_zygote_gt_type(row, female_cols, male_cols)
             is_male_heterozygote = at_least_one_heterozygote(row, male_cols)
             male_mean_coverage, female_mean_coverage, fold_change = calc_coverage_and_fold_change(row, male_cols, female_cols, normalise=True)
             if fold_change is None:
