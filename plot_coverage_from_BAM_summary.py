@@ -14,6 +14,7 @@ parser.add_argument('-o', '--output-id', type=str, default='', help='Identifying
 parser.add_argument('--fold-change-margin', type=float, default=0.2, help='Margin around 2.0 to use for fold change check (default=0.2).')
 parser.add_argument('--log-file', type=str, default='', help='File to write log information to (uses stdout if none specified).')
 parser.add_argument('-r', '--reverse', action='store_true', help='Interchange the labels on the males and females.')
+parser.add_argument('-d', '--duplicates', action='store_true', help='Look at duplicated columns instead.')
 
 # parse command line arguments
 opts = parser.parse_args(sys.argv[1:])
@@ -35,31 +36,16 @@ def find_genders(x, offset, reverse=False):
         return females, males
     else:
         return males, females
-        
-        
-        # not sure how to assign dp_values just to the column with coverage info (should be simple)
-def dp_values(row, cols, dp_idx=2):
-    # get a list of the dp values for the given rows
-    dp_values = []
-    for col in cols:
-        parts = row[col].split(':')
-        if len(parts) == 8:
-            try:
-                dp_value = int(parts[dp_idx])
-                dp_values.append(dp_value)
-            except Exception as ex:
-                logging.warning('DP value not an integer %s.' % parts[dp_idx])
-    return dp_values  
 
-      
-def calc_coverage_and_fold_change(row, male_cols, female_cols, normalise=True):
-    male_dps = np.array(dp_values(row, male_cols), np.float)
-    female_dps = np.array(dp_values(row, female_cols), np.float)
+
+def calc_coverage_and_fold_change(coverage_values, male_cols, female_cols, normalise=True):
+    male_dps = np.array(coverage_values, np.float)[male_cols]
+    female_dps = np.array(coverage_values, np.float)[female_cols]
     if (len(male_dps) == 0) or (len(female_dps) == 0):
         return None, None, None
     total_dp = np.sum(male_dps) + np.sum(female_dps)
     if total_dp == 0:
-        logging.error('Total coverage depth is 0.')
+        logging.warning('Total coverage depth is 0.')
         return None, None, None
     # normalise the depts
     if normalise:
@@ -67,13 +53,15 @@ def calc_coverage_and_fold_change(row, male_cols, female_cols, normalise=True):
         female_dps /= total_dp
     male_mean_coverage = np.mean(male_dps)
     female_mean_coverage = np.mean(female_dps)
+    if male_mean_coverage == 0 or female_mean_coverage == 0:
+        logging.warning('Male or female coverage 0 (male: %.2f, female %.2g).' %(male_mean_coverage, female_mean_coverage))
     fold_change = female_mean_coverage/male_mean_coverage
-    return male_mean_coverage, female_mean_coverage, fold_change        
-    
+    return male_mean_coverage, female_mean_coverage, fold_change
+
  # initialise counters
 removed = 0
 total = 0
-   
+
     # setup logging, this will log anything info level or above
 logging.basicConfig(filename=(opts.log_file if opts.log_file != '' else None), filemode='a', level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 
@@ -110,14 +98,16 @@ try:
     for row in csv_reader:
         if row[0].startswith("#"): # header column
             headers = row
-            individuals = headers[individual_start_col:]
-            male_cols, female_cols = find_genders(individuals, offset=individual_start_col, reverse=opts.reverse)
+            individual_idxs = range(individual_start_col + (1 if opts.duplicates else 0), len(headers), 2)
+            individuals = map(lambda x : headers[x], individual_idxs) # only do every second column
+            male_cols, female_cols = find_genders(individuals, offset=0, reverse=opts.reverse)
         else:
             total += 1
-            male_mean_coverage, female_mean_coverage, fold_change = calc_coverage_and_fold_change(row, male_cols, female_cols, normalise=True)
+            coverage_values = map(lambda x: int(row[x]), individual_idxs)
+            male_mean_coverage, female_mean_coverage, fold_change = calc_coverage_and_fold_change(coverage_values, male_cols, female_cols, normalise=True)
             if fold_change is None:
                 fold_change_in_range = None
-                fold_change_issue += 1 
+                fold_change_issue += 1
             else:
                 fold_changes['all'].append(fold_change)
                 coverages['all']['male'].append(male_mean_coverage)
@@ -140,24 +130,28 @@ try:
     e = time.time()
     logging.info('Filtered %d/%d records leaving %d in %.2f seconds.' % (removed, total, total - removed, e-s))
     f.close()
-    
+
+    plot_order = ['all', 'filtered', 'excluded']
     # now plot the distributions
-    for i, key in enumerate(fold_changes.keys()):
+    plt.figure()
+    for i, key in enumerate(plot_order):
         plt.subplot(3,1,i+1)
         plt.hist(fold_changes[key], range=(0.0, 5.0), bins=20)
-        plt.xlabel('fold change')
-        plt.title('Dist of fold change for %s'%key)
+        plt.xlabel('Fold change')
+        plt.title('Fold change for %s'%key)
     output_id = '_id_%s_' % (opts.output_id)
+    plt.tight_layout()
     plt.savefig('%s%sfold_change_dist.png' % (os.path.basename(opts.input), output_id))
 
     plt.figure()
-    for i, key in enumerate(coverages.keys()):
+    for i, key in enumerate(plot_order):
         plt.subplot(3,1,i+1)
         plt.hist(coverages[key]['male'], bins=20, label='male', alpha=0.8)
         plt.hist(coverages[key]['female'], bins=20, label='female', alpha=0.8)
         plt.legend(loc='best')
         plt.xlabel('coverage')
-        plt.title('Dist of fold change for %s'%key)
+        plt.title('Coverage for %s'%key)
+    plt.tight_layout()
     plt.savefig('%s%scoverage_dist.png' % (os.path.basename(opts.input), output_id))
 
 
