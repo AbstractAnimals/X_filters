@@ -10,8 +10,7 @@ import time
 # setup argument parser
 parser = argparse.ArgumentParser(description="Script to filter vcf files.")
 parser.add_argument('-i', '--input', type=str, default='', help='Name of input vcf file.')
-parser.add_argument('-o', '--output', type=str, default='', help='Name of output vcf file.')
-parser.add_argument('-m', '--meta-output', type=str, default='', help='Name of meta data output file.')
+parser.add_argument('-o', '--output-id', type=str, default='', help='Identifying string to put in output filenames.')
 parser.add_argument('-gq', '--gq-threshold', type=int, default=20, help='GQ threshold to use (default=20).')
 parser.add_argument('--fold-change-margin', type=float, default=0.2, help='Margin around 2.0 to use for fold change check (default=0.2).')
 parser.add_argument('--log-file', type=str, default='', help='File to write log information to (uses stdout if none specified).')
@@ -129,19 +128,35 @@ total = 0
 # setup logging, this will log anything info level or above
 logging.basicConfig(filename=(opts.log_file if opts.log_file != '' else None), filemode='a', level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 
-logging.info('Start of filtering.')
+logging.info('Start of plotting.')
+
+try:
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+
+except ImportError as ex:
+    logging.error('Problem importing plotting library.' + str(ex))
+    sys.exit(-1)
+
+# keep fold change for each group
+fold_changes = {}
+fold_changes['all'] = []
+fold_changes['filtered'] = []
+fold_changes['excluded'] = []
+
+coverages = {}
+coverages['all'] = {'male': [], 'female': []}
+coverages['filtered'] = {'male': [], 'female': []}
+coverages['excluded'] = {'male': [], 'female': []}
+
+fold_change_issue = 0
 
 # open files for reading
 try:
     f = open(opts.input, "r")
-    fw = open(opts.output, "w")
-    fm = open(opts.meta_output, "w")
     logging.info('Opened input file %s' % opts.input)
-    logging.info('Opened output file %s' % opts.output)
-    logging.info('Opened output meta file %s' % opts.meta_output)
     csv_reader = csv.reader(f, delimiter="\t")
-    csv_writer = csv.writer(fw, delimiter="\t")
-    csv_meta_writer = csv.writer(fm, delimiter="\t")
     s = time.time()
     for row in csv_reader:
         if row[0].startswith("##"):
@@ -150,33 +165,57 @@ try:
             headers = row
             individuals = headers[individual_start_col:]
             male_cols, female_cols = find_genders(individuals, offset=individual_start_col, reverse=opts.reverse)
-            csv_writer.writerow(row)
-            csv_meta_writer.writerow(["locus", "position", "is_male_heterozygote", "n_male_homozygote", "n_male_heterozygote",
-                                      "n_female_homozygote", "n_female_heterozygote", "n_gq_filtered", "male_mean_coverage",
-                                      "female_mean_coverage", "fold_change", "fold_change_in_range"])
         else:
             total += 1
-            gq_filtered = filter_by_gq(row, opts.gq_threshold, offset=individual_start_col)  # filter individuals where gq is less than given threshold                            
-            n_hm_male, n_ht_male, n_hm_female, n_ht_female = count_zygote_gt_type(row, female_cols, male_cols)
+            gq_filtered = filter_by_gq(row, opts.gq_threshold, offset=individual_start_col)  # filter individuals where gq is less than given threshold
+            n_hm_male, n_ht_male, n_hm_female, n_ht_female = count_zygote_gt_type(row, male_cols, female_cols)
             is_male_heterozygote = at_least_one_heterozygote(row, male_cols)
             male_mean_coverage, female_mean_coverage, fold_change = calc_coverage_and_fold_change(row, male_cols, female_cols, normalise=True)
             if fold_change is None:
                 fold_change_in_range = None
+                fold_change_issue += 1 
             else:
+                fold_changes['all'].append(fold_change)
+                coverages['all']['male'].append(male_mean_coverage)
+                coverages['all']['female'].append(female_mean_coverage)
                 if (2.0 - opts.fold_change_margin) < fold_change < (2.0 + opts.fold_change_margin):
                     fold_change_in_range = True
+                    fold_changes['filtered'].append(fold_change)
+                    coverages['filtered']['male'].append(male_mean_coverage)
+                    coverages['filtered']['female'].append(female_mean_coverage)
                 else:
                     fold_change_in_range = False
+                    fold_changes['excluded'].append(fold_change)
+                    coverages['excluded']['male'].append(male_mean_coverage)
+                    coverages['excluded']['female'].append(female_mean_coverage)
+
             if not is_male_heterozygote and fold_change_in_range:
-                csv_writer.writerow(row)
+                pass
             else:
                 removed += 1
-            csv_meta_writer.writerow([row[0], row[1], is_male_heterozygote, n_hm_male, n_ht_male, n_hm_female, n_ht_female, gq_filtered,
-                                      male_mean_coverage, female_mean_coverage, fold_change, fold_change_in_range])
     e = time.time()
     logging.info('Filtered %d/%d records leaving %d in %.2f seconds.' % (removed, total, total - removed, e-s))
     f.close()
-    fw.close()
-    fm.close()
+    
+    # now plot the distributions
+    for i, key in enumerate(fold_changes.keys()):
+        plt.subplot(3,1,i+1)
+        plt.hist(fold_changes[key], range=(0.0, 5.0), bins=20)
+        plt.xlabel('fold change')
+        plt.title('Dist of fold change for %s'%key)
+    output_id = '_id_%s_' % (opts.output_id)
+    plt.savefig('%s%sfold_change_dist.png' % (os.path.basename(opts.input), output_id))
+
+    plt.figure()
+    for i, key in enumerate(coverages.keys()):
+        plt.subplot(3,1,i+1)
+        plt.hist(coverages[key]['male'], bins=20, label='male', alpha=0.8)
+        plt.hist(coverages[key]['female'], bins=20, label='female', alpha=0.8)
+        plt.legend(loc='best')
+        plt.xlabel('coverage')
+        plt.title('Dist of fold change for %s'%key)
+    plt.savefig('%s%scoverage_dist.png' % (os.path.basename(opts.input), output_id))
+
+
 except IOError as ioerror:
     logging.error('Problem opening files: ' + str(ioerror))
