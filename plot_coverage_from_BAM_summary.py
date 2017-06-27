@@ -99,11 +99,11 @@ try:
         if row[0].startswith("#"): # header column
             headers = row
             individual_idxs = range(individual_start_col + (1 if opts.duplicates else 0), len(headers), 2)
-            individuals = map(lambda x : headers[x], individual_idxs) # only do every second column
+            individuals = list(map(lambda x : headers[x], individual_idxs)) # only do every second column
             male_cols, female_cols = find_genders(individuals, offset=0, reverse=opts.reverse)
         else:
             total += 1
-            coverage_values = map(lambda x: int(row[x]), individual_idxs)
+            coverage_values = list(map(lambda x: int(row[x]), individual_idxs))
             male_mean_coverage, female_mean_coverage, fold_change = calc_coverage_and_fold_change(coverage_values, male_cols, female_cols, normalise=True)
             if fold_change is None:
                 fold_change_in_range = None
