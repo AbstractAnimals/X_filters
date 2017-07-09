@@ -127,16 +127,16 @@ def total_read_dp_per_individual(input_file, individual_start_col, gq_threshold)
 def calc_coverage_and_fold_change(row, male_cols, female_cols, total_sample_read_depth, normalise=True):
     male_dps = np.array(dp_values(row, male_cols), np.float)                 
     female_dps = np.array(dp_values(row, female_cols), np.float)
-    male_dp_total = np.array(list(map(lambda x: total_sample_read_depth[x], male_dps)))
-    female_dp_total = np.array(list(map(lambda x: total_sample_read_depth[x], female_dps)))
-    if male_dp_total == 0 or female_dp_total == 0:
+    male_dp_total = np.array(list(map(lambda x: total_sample_read_depth[x], male_cols)))
+    female_dp_total = np.array(list(map(lambda x: total_sample_read_depth[x], female_cols)))
+    if np.any(male_dp_total == 0) or np.any(female_dp_total == 0):
         logging.error('Total coverage depth is 0.')
         return None, None, None
     
-    # normalise the depts
+    # normalise the depths
     if normalise: 
-        male_dps /= male_dp_total
-        female_dps /= female_dp_total
+        male_dps = male_dps/male_dp_total * 1000000
+        female_dps = female_dps/female_dp_total * 1000000
                                   
     male_mean_coverage = np.mean(male_dps)
     female_mean_coverage = np.mean(female_dps)
@@ -177,7 +177,7 @@ fold_change_issue = 0
 
 
 total_sample_read_depth = total_read_dp_per_individual(opts.input, individual_start_col, opts.gq_threshold)
-
+print(total_sample_read_depth)
 
 
 # open files for reading
@@ -226,19 +226,19 @@ try:
     f.close()
     
     # now plot the distributions
-    for i, key in enumerate(fold_changes.keys()):
+    for i, key in enumerate(['all', 'filtered', 'excluded']):
         plt.subplot(3,1,i+1)
-        plt.hist(fold_changes[key], range=(0.0, 5.0), bins=20)
+        plt.hist(fold_changes[key], range=(0.0, 5.0), bins=50)
         plt.xlabel('fold change')
         plt.title('Dist of fold change for %s'%key)
     output_id = '_id_%s_' % (opts.output_id)
     plt.savefig('%s%sfold_change_dist.png' % (os.path.basename(opts.input), output_id))
 
     plt.figure()
-    for i, key in enumerate(coverages.keys()):
+    for i, key in enumerate(['all', 'filtered', 'excluded']):
         plt.subplot(3,1,i+1)
-        plt.hist(coverages[key]['male'], bins=20, label='male', alpha=0.8)
-        plt.hist(coverages[key]['female'], bins=20, label='female', alpha=0.8)
+        plt.hist(coverages[key]['male'], bins=100, label='male', alpha=0.5)
+        plt.hist(coverages[key]['female'], bins=100, label='female', alpha=0.5)
         plt.legend(loc='best')
         plt.xlabel('coverage')
         plt.title('Dist of fold change for %s'%key)
