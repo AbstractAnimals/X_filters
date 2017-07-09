@@ -119,7 +119,7 @@ def total_read_dp_per_individual(input_file, individual_start_col, gq_threshold)
                 all_samples_total_coverages[i + individual_start_col]=0
         else: 
             gq_filtered = filter_by_gq(row, gq_threshold, offset=individual_start_col)
-            for col_idx in range(individuals_start_col:len(row)):
+            for col_idx in range(individuals_start_col,len(row)):
                 individual_dp = dp_values(row, [col_idx])[0]
                 all_samples_total_coverages[col_idx] += individual_dp
     return all_samples_total_coverages
