@@ -119,7 +119,7 @@ def total_read_dp_per_individual(input_file, individual_start_col, gq_threshold)
                 all_samples_total_coverages[i + individual_start_col]=0
         else: 
             gq_filtered = filter_by_gq(row, gq_threshold, offset=individual_start_col)
-            for col_idx in range(individuals_start_col, len(row)):
+            for col_idx in range(individual_start_col, len(row)):
                 individual_dp = dp_values(row, [col_idx])[0]
                 all_samples_total_coverages[col_idx] += individual_dp
     return all_samples_total_coverages
@@ -129,8 +129,7 @@ def calc_coverage_and_fold_change(row, male_cols, female_cols, total_sample_read
     female_dps = np.array(dp_values(row, female_cols), np.float)
     male_dp_total = np.array(list(map(lambda x: total_sample_read_depth[x], male_dps)))
     female_dp_total = np.array(list(map(lambda x: total_sample_read_depth[x], female_dps)))
-    
-     if male_dp_total == 0 or female_dp_total == 0:
+    if male_dp_total == 0 or female_dp_total == 0:
         logging.error('Total coverage depth is 0.')
         return None, None, None
     
