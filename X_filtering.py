@@ -101,21 +101,44 @@ def dp_values(row, cols, dp_idx=2):
                 dp_values.append(dp_value)
             except Exception as ex:
                 logging.warning('DP value not an integer %s.' % parts[dp_idx])
+        else: dp_values.append(0)
     return dp_values
+    
+def total_read_dp_per_individual(input_file, individual_start_col, gq_threshold):
+    f = open(input_file, "r")
+    logging.info('Opened input file %s' % input_file)
+    csv_reader = csv.reader(f, delimiter="\t")
+    s = time.time()
+    all_samples_total_coverages={}
+    for row in csv_reader:
+        if row[0].startswith("##"):
+            continue
+        if row[0].startswith("#"): # header column
+            headers = row
+            individuals = headers[individual_start_col:]
+            for i, individual in enumerate(individuals): 
+                all_samples_total_coverages[i + individual_start_col]=0
+        else: 
+            gq_filtered = filter_by_gq(row, gq_threshold, offset=individual_start_col)
+            for col_idx in range(individual_start_col, len(row)):
+                individual_dp = dp_values(row, [col_idx])[0]
+                all_samples_total_coverages[col_idx] += individual_dp
+    return all_samples_total_coverages
 
-def calc_coverage_and_fold_change(row, male_cols, female_cols, normalise=True):
-    male_dps = np.array(dp_values(row, male_cols), np.float)
+def calc_coverage_and_fold_change(row, male_cols, female_cols, total_sample_read_depth, normalise=True):
+    male_dps = np.array(dp_values(row, male_cols), np.float)                 
     female_dps = np.array(dp_values(row, female_cols), np.float)
-    if (len(male_dps) == 0) or (len(female_dps) == 0):
-        return None, None, None
-    total_dp = np.sum(male_dps) + np.sum(female_dps)
-    if total_dp == 0:
+    male_dp_total = np.array(list(map(lambda x: total_sample_read_depth[x], male_cols)))
+    female_dp_total = np.array(list(map(lambda x: total_sample_read_depth[x], female_cols)))
+    if np.any(male_dp_total == 0) or np.any(female_dp_total == 0):
         logging.error('Total coverage depth is 0.')
         return None, None, None
-    # normalise the depts
-    if normalise:
-        male_dps /= total_dp
-        female_dps /= total_dp
+    
+    # normalise the depths
+    if normalise: 
+        male_dps = male_dps/male_dp_total * 1000000
+        female_dps = female_dps/female_dp_total * 1000000
+                                  
     male_mean_coverage = np.mean(male_dps)
     female_mean_coverage = np.mean(female_dps)
     fold_change = female_mean_coverage/male_mean_coverage
@@ -130,6 +153,11 @@ total = 0
 logging.basicConfig(filename=(opts.log_file if opts.log_file != '' else None), filemode='a', level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 
 logging.info('Start of filtering.')
+
+
+total_sample_read_depth = total_read_dp_per_individual(opts.input, individual_start_col, opts.gq_threshold)
+#print(total_sample_read_depth)
+
 
 # open files for reading
 try:
@@ -159,7 +187,7 @@ try:
             gq_filtered = filter_by_gq(row, opts.gq_threshold, offset=individual_start_col)  # filter individuals where gq is less than given threshold                            
             n_hm_male, n_ht_male, n_hm_female, n_ht_female = count_zygote_gt_type(row, female_cols, male_cols)
             is_male_heterozygote = at_least_one_heterozygote(row, male_cols)
-            male_mean_coverage, female_mean_coverage, fold_change = calc_coverage_and_fold_change(row, male_cols, female_cols, normalise=True)
+            male_mean_coverage, female_mean_coverage, fold_change = calc_coverage_and_fold_change(row, male_cols, female_cols, total_sample_read_depth, normalise=True)
             if fold_change is None:
                 fold_change_in_range = None
             else:
