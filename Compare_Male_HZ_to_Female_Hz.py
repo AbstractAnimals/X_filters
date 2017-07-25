@@ -128,9 +128,9 @@ try:
     logging.info('Found values for %d snps.' % (len(male_hzs)))
     f.close()
 
-    plt.plot(male_hzs, female_hzs, marker='o', ls='none')
-    plt.xlabel('male')
-    plt.ylabel('female')
+    plt.plot(female_hzs, male_hzs, marker='o', ls='none')
+    plt.xlabel('female')
+    plt.ylabel('male')
     plt.title('Heterzygote proportion')
     plt.savefig('%s_heterozygote_scatter.png' % (opts.output))
 
