@@ -132,3 +132,41 @@ def calc_coverage_and_fold_change(row, male_cols, female_cols, total_sample_read
     female_mean_coverage = np.mean(female_dps)
     fold_change = female_mean_coverage/male_mean_coverage
     return male_mean_coverage, female_mean_coverage, fold_change
+    
+    
+def get_SNP_IDs_from_VCF(vcf_filename):
+    SNP_IDs=[]
+    # open files for reading
+    try:
+        f = open(vcf_filename, "r")
+        csv_reader = csv.reader(f, delimiter="\t")
+        for row in csv_reader:
+            if row[0].startswith("##"):
+                continue
+            if row[0].startswith("#"): # header column
+                continue
+            else:
+                SNP_IDs.append(row[0]+":"+row[1])
+        f.close()
+    except IOError:
+        logging.error("Failed to open " + vcf_filename)
+
+
+    return SNP_IDs
+    
+def get_coverages_from_meta(meta_filename, SNP_IDs):
+    male_coverages, female_coverages = [], []
+    try:
+        f = open(meta_filename, "r")
+        csv_reader = csv.reader(f, delimiter="\t")
+        headers = next(csv_reader)
+        for row in csv_reader:
+            SNP_ID = row[0] + ':' + row[1]
+            if SNP_ID in SNP_IDs:    
+                male_coverages.append(float(row[8]))
+                female_coverages.append(float(row[9]))
+        f.close()
+    except IOError:
+        logging.error("Failed to open " + meta_filename)
+    return male_coverages, female_coverages
+
