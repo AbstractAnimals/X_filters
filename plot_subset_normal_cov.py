@@ -37,13 +37,13 @@ if __name__ == '__main__':
     logging.info('Start of plotting.')
     
     try:
-    import matplotlib
-    matplotlib.use('Agg')
-    import matplotlib.pyplot as plt
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
 
-except ImportError as ex:
-    logging.error('Problem importing plotting library.' + str(ex))
-    sys.exit(-1)
+    except ImportError as ex:
+        logging.error('Problem importing plotting library.' + str(ex))
+        sys.exit(-1)
     
     # getting SNP ids of interest from vcf file
     SNP_IDs = get_SNP_IDs_from_VCF(opts.input)
