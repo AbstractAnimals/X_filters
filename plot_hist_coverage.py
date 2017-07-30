@@ -241,7 +241,7 @@ try:
         plt.hist(coverages[key]['female'], bins=100, label='female', alpha=0.5)
         plt.legend(loc='best')
         plt.xlabel('coverage')
-        plt.title('Dist of fold change for %s'%key)
+        plt.title('Dist of coverage for %s'%key)
     plt.savefig('%s%scoverage_dist.png' % (os.path.basename(opts.input), output_id))
 
 
