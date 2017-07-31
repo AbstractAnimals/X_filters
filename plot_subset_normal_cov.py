@@ -56,7 +56,7 @@ if __name__ == '__main__':
     plt.hist(female_coverages, bins=100, label='female', alpha=0.5)
     plt.legend(loc='best')
     plt.xlabel('coverage')
-    plt.title('Dist of coverage for %s'%key)
+    plt.title('Dist of coverage for %s')
     plt.savefig('%s_coverage_dist.png' % (opts.output))
     
     
