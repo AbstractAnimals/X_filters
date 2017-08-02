@@ -11,6 +11,10 @@ import csv
 import argparse # package to help with argument parsing
 import time
 
+# import custom functions
+from X_filtering_functions import *
+
+
 # setup argument parser
 parser = argparse.ArgumentParser(description="Script to filter vcf files.")
 parser.add_argument('-i', '--input', type=str, default='', help='Name of input vcf file.')
@@ -64,7 +68,7 @@ try:
             csv_writer.writerow(row)
             csv_meta_writer.writerow(["locus", "position", "is_male_heterozygote", "n_male_homozygote", "n_male_heterozygote",
                                       "n_female_homozygote", "n_female_heterozygote", "n_gq_filtered", "male_mean_coverage",
-                                      "female_mean_coverage", "fold_change", "fold_change_in_range", "t_stat_eq", "pvalue_eq"])
+                                      "emale_mean_coverage", "fold_change", "fold_change_in_range", "t_stat_eq", "pvalue_eq"])
         else:
             total += 1
             gq_filtered = filter_by_gq(row, opts.gq_threshold, offset=individual_start_col)  # filter individuals where gq is less than given threshold                            
