@@ -10,6 +10,12 @@ import time
 import csv
 import sys
 import os
+from optparse import OptionParser
+from collections import defaultdict
+#from utils import utils_logging
+from scipy import stats
+import argparse # package to help with argument parsing
+
 
 
 # define useful functions
@@ -132,7 +138,8 @@ def calc_coverage_and_fold_change(row, male_cols, female_cols, total_sample_read
     female_mean_coverage = np.mean(female_dps)
     fold_change = female_mean_coverage/male_mean_coverage
     t_stat_eq, pvalue_eq = stats.ttest_ind(male_dps,female_dps)
-    return male_mean_coverage, female_mean_coverage, fold_change, t_stat_eq, pvalue_eq
+    pvalue_eq_divided_2 = pvalue_eq/2
+    return male_mean_coverage, female_mean_coverage, fold_change, t_stat_eq, pvalue_eq, pvalue_eq_divided_2
 
 
     

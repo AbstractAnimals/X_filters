@@ -68,7 +68,7 @@ try:
             csv_writer.writerow(row)
             csv_meta_writer.writerow(["locus", "position", "is_male_heterozygote", "n_male_homozygote", "n_male_heterozygote",
                                       "n_female_homozygote", "n_female_heterozygote", "n_gq_filtered", "male_mean_coverage",
-                                      "emale_mean_coverage", "fold_change", "fold_change_in_range", "t_stat_eq", "pvalue_eq"])
+                                      "female_mean_coverage", "fold_change", "fold_change_in_range", "t_stat_eq", "pvalue_eq", "pvalue_eq_divided_2"])
         else:
             total += 1
             gq_filtered = filter_by_gq(row, opts.gq_threshold, offset=individual_start_col)  # filter individuals where gq is less than given threshold                            
@@ -85,12 +85,12 @@ try:
                     fold_change_in_range = False
                     
                
-            if not is_male_heterozygote and pvalue_eq<.05 and fold_change_in_range:
+            if not is_male_heterozygote and pvalue_eq_divided_2<.05 and fold_change_in_range and t_stat_eq>0:
                 csv_writer.writerow(row)
             else:
                 removed += 1
             csv_meta_writer.writerow([row[0], row[1], is_male_heterozygote, n_hm_male, n_ht_male, n_hm_female, n_ht_female, gq_filtered,
-                                      male_mean_coverage, female_mean_coverage, fold_change, fold_change_in_range, t_stat_eq, pvalue_eq])
+                                      male_mean_coverage, female_mean_coverage, fold_change, fold_change_in_range, t_stat_eq, pvalue_eq, pvalue_eq_divided_2])
     e = time.time()
     logging.info('Filtered %d/%d records leaving %d in %.2f seconds.' % (removed, total, total - removed, e-s))
     f.close()
