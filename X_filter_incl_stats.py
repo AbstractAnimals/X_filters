@@ -75,7 +75,6 @@ try:
             n_hm_male, n_ht_male, n_hm_female, n_ht_female = count_zygote_gt_type(row, female_cols, male_cols)
             is_male_heterozygote = at_least_one_heterozygote(row, male_cols)
             male_mean_coverage, female_mean_coverage, fold_change,t_stat_eq, pvalue_eq, pvalue_eq_divided_2 = calc_coverage_and_fold_change(row, male_cols, female_cols, total_sample_read_depth, normalise=True)
-            t_stat_eq, pvalue_eq = stats.ttest_ind(male_dps,female_dps)    
             if fold_change is None:
                 fold_change_in_range = None
             else:
