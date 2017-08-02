@@ -115,23 +115,26 @@ def total_read_dp_per_individual(input_file, individual_start_col, gq_threshold)
     return all_samples_total_coverages
 
 def calc_coverage_and_fold_change(row, male_cols, female_cols, total_sample_read_depth, normalise=True):
-    male_dps = np.array(dp_values(row, male_cols), np.float)
+    male_dps = np.array(dp_values(row, male_cols), np.float)                 
     female_dps = np.array(dp_values(row, female_cols), np.float)
     male_dp_total = np.array(list(map(lambda x: total_sample_read_depth[x], male_cols)))
     female_dp_total = np.array(list(map(lambda x: total_sample_read_depth[x], female_cols)))
     if np.any(male_dp_total == 0) or np.any(female_dp_total == 0):
         logging.error('Total coverage depth is 0.')
         return None, None, None
-
+    
     # normalise the depths
-    if normalise:
+    if normalise: 
         male_dps = male_dps/male_dp_total * 1000000
         female_dps = female_dps/female_dp_total * 1000000
-
+                                  
     male_mean_coverage = np.mean(male_dps)
     female_mean_coverage = np.mean(female_dps)
     fold_change = female_mean_coverage/male_mean_coverage
-    return male_mean_coverage, female_mean_coverage, fold_change
+    t_stat_eq, pvalue_eq = stats.ttest_ind(male_dps,female_dps)
+    return male_mean_coverage, female_mean_coverage, fold_change, t_stat_eq, pvalue_eq
+
+
     
     
 def get_SNP_IDs_from_VCF(vcf_filename):
