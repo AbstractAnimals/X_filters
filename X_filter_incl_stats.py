@@ -84,7 +84,7 @@ try:
                     fold_change_in_range = False
                     
                
-            if not is_male_heterozygote and pvalue_eq_divided_2<.05 and fold_change_in_range and t_stat_eq>0:
+            if not is_male_heterozygote and pvalue_eq_divided_2<.05 and fold_change_in_range:
                 csv_writer.writerow(row)
             else:
                 removed += 1
