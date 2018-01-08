@@ -72,7 +72,7 @@ try:
         else:
             total += 1
             gq_filtered = filter_by_gq(row, opts.gq_threshold, offset=individual_start_col)  # filter individuals where gq is less than given threshold                            
-            n_hm_male, n_ht_male, n_hm_female, n_ht_female = count_zygote_gt_type(row, female_cols, male_cols)
+            n_hm_male, n_ht_male, n_hm_female, n_ht_female = count_zygote_gt_type(row, male_cols, female_cols)
             is_male_heterozygote = at_least_one_heterozygote(row, male_cols)
             male_mean_coverage, female_mean_coverage, fold_change,t_stat_eq, pvalue_eq, pvalue_eq_divided_2 = calc_coverage_and_fold_change(row, male_cols, female_cols, total_sample_read_depth, normalise=True)
             if fold_change is None:
